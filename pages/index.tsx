@@ -1,8 +1,206 @@
 import Head from "next/head"
+import React, { useState } from "react"
 
 import type { NextPage } from "next"
 
+type Todo = {
+  id: number
+  name: string
+  isDone: boolean
+}
+
+const mock0: Todo = {
+  id: 0,
+  name: "髪を切りに行く",
+  isDone: true,
+}
+const mock1: Todo = {
+  id: 1,
+  name: "プレゼントを選ぶ",
+  isDone: false,
+}
+const mock2: Todo = {
+  id: 2,
+  name: "映画館デートする",
+  isDone: false,
+}
+const mockTodoList = [mock0, mock1, mock2]
+
+let nextId = 3
+
+type Props = React.ComponentProps<"button">
+
+interface ButtonProps extends Props {
+  role: keyof typeof BUTTON_PROPS
+}
+
+const BUTTON_PROPS = {
+  register: {
+    style: "",
+    text: "",
+  },
+  edit: {
+    style: "",
+    text: "",
+  },
+  stopEditing: {
+    style: "",
+    text: "",
+  },
+  remove: {
+    style: "",
+    text: "",
+  },
+  clear: {
+    style: "",
+    text: "",
+  },
+}
+
+export const Button = ({ role, ...props }: ButtonProps) => {
+  const prop = BUTTON_PROPS[role]
+
+  return (
+    <button {...props} className={prop.style}>
+      {prop.text}
+    </button>
+  )
+}
+
+interface TodoProps {
+  todo: Todo
+  onRemove: () => void
+  onToggle: () => void
+  onEdit: (name: string) => void
+}
+
+const Todo = ({ todo, onRemove, onToggle, onEdit }: TodoProps) => {
+  const [isEditing, setIsEditting] = useState(false)
+
+  const startEditing = () => setIsEditting(true)
+  const finishEditing = () => {
+    setIsEditting(false)
+  }
+
+  const handleEditing = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onEdit(e.target.value)
+  }
+
+  if (isEditing)
+    return (
+      <tr className="bg-white dark:bg-gray-800 border-b">
+        <td className="py-4 px-6">
+          <input type="checkbox" checked={todo.isDone} onChange={onToggle} />
+        </td>
+        <td className="py-4 px-6">
+          <input
+            type="text"
+            onChange={handleEditing}
+            className="border"
+            value={todo.name}
+          />
+        </td>
+        <td className="py-4 px-6">
+          <button
+            onClick={finishEditing}
+            className="py-2 px-4 font-bold text-white bg-green-500 hover:bg-green-700 rounded"
+          >
+            編集終了
+          </button>
+        </td>
+        <td className="py-4 px-6">
+          <button
+            onClick={onRemove}
+            className="py-2 px-4 font-bold text-white bg-red-500 rounded opacity-50 cursor-not-allowed"
+            disabled
+          >
+            削除
+          </button>
+        </td>
+      </tr>
+    )
+
+  return (
+    <tr key={todo.id} className="bg-white dark:bg-gray-800 border-b">
+      <td className="py-4 px-6">
+        <input type="checkbox" checked={todo.isDone} onChange={onToggle} />
+      </td>
+      <td className="py-4 px-6">
+        <p
+          className="w-40"
+          style={{ textDecoration: todo.isDone ? "line-through" : "" }}
+        >
+          {todo.name}
+        </p>
+      </td>
+      <td className="py-4 px-6">
+        <button
+          onClick={startEditing}
+          className="py-2 px-4 font-bold text-white bg-blue-500 hover:bg-blue-700 rounded"
+        >
+          編集する
+        </button>
+      </td>
+      <td className="py-4 px-6">
+        <button
+          onClick={onRemove}
+          className="py-2 px-4 font-bold text-white bg-red-500 hover:bg-red-700 rounded"
+        >
+          削除
+        </button>
+      </td>
+    </tr>
+  )
+}
+
 const Home: NextPage = () => {
+  const [todoList, setTodoList] = useState(mockTodoList)
+  const [text, setText] = useState("")
+
+  const handleChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setText(e.target.value)
+  }
+
+  const register = () => {
+    const newTodo: Todo = {
+      id: nextId,
+      name: text,
+      isDone: false,
+    }
+    setTodoList([...todoList, newTodo])
+
+    setText("")
+    nextId++
+  }
+
+  const remove = (id: number) => () => {
+    const newState = todoList.filter((todo) => todo.id !== id)
+    setTodoList(newState)
+  }
+
+  const toggle = (id: number) => () => {
+    const newState = todoList.map((todo) => {
+      if (todo.id !== id) return todo
+      return { ...todo, isDone: !todo.isDone }
+    })
+    setTodoList(newState)
+  }
+
+  const clear = () => {
+    const newState = todoList.filter((todo) => !todo.isDone)
+    setTodoList(newState)
+  }
+
+  const edit = (id: number) => (name: string) => {
+    const newState = todoList.map((todo) => {
+      if (todo.id !== id) return todo
+      else {
+        return { ...todo, name: name }
+      }
+    })
+    setTodoList(newState)
+  }
+
   return (
     <div>
       <Head>
@@ -11,8 +209,51 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="flex flex-col justify-center items-center m-0 min-h-screen">
-        ローカルホストが立ち上がりました
+      <main className="flex flex-col items-center py-4 m-0 min-h-screen">
+        <div className="flex flex-col gap-2 py-10">
+          <input
+            type="text"
+            value={text}
+            onChange={handleChangeInput}
+            className="border"
+          />
+          <button
+            onClick={register}
+            className="py-2 px-4 font-bold text-white bg-blue-500 hover:bg-blue-400 rounded border-b-4 border-blue-700 hover:border-blue-500"
+            disabled={text === ""}
+          >
+            Todo登録
+          </button>
+        </div>
+
+        <table className="text-sm text-left text-gray-500 table-auto">
+          <thead className="text-xs text-gray-700 uppercase bg-gray-50 ">
+            <tr>
+              <th className="py-4 px-6">ステータス</th>
+              <th className="py-4 px-6">名前</th>
+              <th></th>
+              <th className="py-4 px-6">
+                <button
+                  onClick={clear}
+                  className="py-2 px-4 font-bold text-white bg-gray-700 hover:bg-gray-900 rounded"
+                >
+                  一掃
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {todoList.map((todo) => (
+              <Todo
+                key={todo.id}
+                todo={todo}
+                onRemove={remove(todo.id)}
+                onToggle={toggle(todo.id)}
+                onEdit={edit(todo.id)}
+              />
+            ))}
+          </tbody>
+        </table>
       </main>
     </div>
   )
